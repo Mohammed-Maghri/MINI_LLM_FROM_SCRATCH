@@ -15,9 +15,11 @@ This project aims to demystify Large Language Models by implementing each compon
 
 - [x] **Phase 1: Tokenization Training**
   - [x] Byte Pair Encoding (BPE) algorithm implementation
-  - [x] Training data preparation (1000 words)
+  - [x] Training data preparation (1000 words - morphological patterns)
+  - [x] Frequency-based dataset (1000 most common English words) ✨
   - [x] Vocabulary generation (884 tokens)
   - [x] Frequency threshold to prevent overfitting
+  - [x] Scaling optimizations identified for large datasets
 - [ ] **Phase 2: Complete Tokenizer**
   - [ ] Encoder function (text → token IDs)
   - [ ] Decoder function (token IDs → text)
@@ -82,12 +84,19 @@ BPE works by iteratively merging the most frequent adjacent character pairs:
 - `recur_func()` - Orchestrates iterative training
 - `generate_tokens_list()` - Creates final vocabulary
 
-**Training Dataset:**
+**Training Datasets:**
 
-- 1000 carefully selected words
-- Rich morphological variations
-- Common prefixes (un-, re-, dis-, pre-)
-- Common suffixes (-ing, -ed, -er, -ly, -ness, -able)
+1. **Initial Dataset (`data.json`):**
+   - 1000 words with morphological variations
+   - Common prefixes (un-, re-, dis-, pre-)
+   - Common suffixes (-ing, -ed, -er, -ly, -ness, -able)
+   - Generated vocabulary: 884 tokens (256 base + 628 learned)
+
+2. **Frequency-Based Dataset (`common_words_1000.json`):** ✨ NEW
+   - 1000 most commonly used English words
+   - Based on corpus frequency analysis
+   - Includes core function words, common verbs, nouns, adjectives
+   - Optimized for real-world language patterns
 
 **Generated Vocabulary:**
 
@@ -108,6 +117,15 @@ BPE works by iteratively merging the most frequent adjacent character pairs:
 845: "understand" - Complex word
 ```
 
+**Dataset Comparison:**
+
+| Dataset                     | Purpose                           | Best For                      |
+| --------------------------- | --------------------------------- | ----------------------------- |
+| `data.json`                 | Morphological patterns            | Learning grammatical suffixes |
+| `common_words_1000.json` ✨ | Real-world frequency distribution | Production-like tokenization  |
+
+The frequency-based dataset provides more realistic token distributions matching actual English usage, while the morphological dataset is better for understanding how BPE learns linguistic structures.
+
 ## Project Structure
 
 ```
@@ -117,7 +135,8 @@ BPE works by iteratively merging the most frequent adjacent character pairs:
 │   ├── byte_pair_encoding.py        # BPE algorithm implementation
 │   └── opened_files.py              # File I/O utilities
 ├── data_set/
-│   └── data.json                    # Training corpus (1000 words)
+│   ├── data.json                    # Original training corpus (1000 morphologically-rich words)
+│   └── common_words_1000.json       # Frequency-based corpus (1000 most common English words) ✨ NEW
 ├── output/
 │   └── output_set.json              # Generated vocabulary
 ├── vocab/                           # (To be created)
@@ -258,6 +277,17 @@ assert decoded == text  # Must pass
 - Add caching for common words
 - Optimize with trie data structures
 
+### Large-Scale Training Optimizations
+
+For handling massive datasets (millions+ words):
+
+- **Memory Management:** Streaming/batching instead of loading all data
+- **Incremental Counting:** Update pair frequencies without storing all pairs
+- **Parallel Processing:** Multi-core pair counting and merging
+- **Early Stopping:** Halt when merge frequency drops below threshold
+- **Efficient Data Structures:** NumPy arrays for token sequences
+- **Caching:** Store and reuse intermediate merge results
+
 ### Model Improvements
 
 - Implement attention visualization
@@ -299,17 +329,22 @@ python3 main.py
 
 This will:
 
-1. Load the training dataset from `data_set/data.json`
+1. Load the training dataset from `data_set/data.json` (or configure to use `common_words_1000.json`)
 2. Run BPE training algorithm
 3. Generate vocabulary at `output/output_set.json`
 4. Print learned merge tokens
 
 ### Configuration
 
-Edit `.env` file:
+Edit `.env` file to choose dataset:
 
 ```
+# Option 1: Morphological patterns (original)
 DATA_SET_FILE="data_set/data.json"
+
+# Option 2: Most common English words (frequency-based)
+DATA_SET_FILE="data_set/common_words_1000.json"
+
 FILE_GENERATION="output/output_set.json"
 ```
 
@@ -329,4 +364,4 @@ Built as a deep dive into LLM architecture and training, demonstrating that comp
 
 **Status:** Phase 1 Complete - Tokenization Training ✓  
 **Next:** Phase 2 - Encoder/Decoder Implementation  
-**Last Updated:** February 7, 2026
+**Last Updated:** February 8, 2026
