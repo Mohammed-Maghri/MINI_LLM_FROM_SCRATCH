@@ -9,7 +9,9 @@ def open_reads_json_file(file_path : str) -> dict:
         print(f"Error: The file at {file_path} was not found.")
         return {}
 
-def write_into_json (file_name : str , object_written : dict) -> None :
-    with open(file_name, 'w',encoding="utf-8") as f:
+def write_into_json (file_name : str , object_written : dict) -> dict :
+    with open(file_name, 'w',encoding="latin-1") as f:
         json.dump(object_written, f, indent=2)
-    return
+    with open(file_name, 'r',encoding="latin-1") as f:
+        data = json.load(f)
+    return data

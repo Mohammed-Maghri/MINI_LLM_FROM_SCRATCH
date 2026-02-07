@@ -8,7 +8,7 @@ def start_word_set_generation(data : dict) -> dict:
             for value in values:
                 element : list[str] = list(value)
                 word_sets.append(element)
-    print(word_sets)
+    # print(word_sets)
     return {"word_sets": word_sets,"tokens_size": data.get("tokens_size", 0)}
 
 
