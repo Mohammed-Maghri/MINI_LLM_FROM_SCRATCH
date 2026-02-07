@@ -29,7 +29,7 @@ def replace_voted_token(word_sets : dict, voted_token : str) -> dict:
     return word_sets
 
 
-def sliding_window_comparison (word_sets : dict) -> list[str]:
+def sliding_window_comparison (word_sets : dict) -> list[dict]:
     all_tokens = []
     tokens_vote = []
     for word_set in word_sets.get("word_sets", []):
@@ -49,11 +49,14 @@ def sliding_window_comparison (word_sets : dict) -> list[str]:
         return []
     for (key, value) in tokens_count.items():
         if value == max_value:
-            all_tokens.append(key[0] + key[1])
+            all_tokens.append({
+                "token_vocab" : key[0] + key[1],
+                "instruction" : key[0] + ' ' + key[1] ,
+            })
     return all_tokens
 
 
-def recur_func (tokens_saved : list[str], word_set : dict, counter : int, max_tokens : int) -> None :
+def recur_func (tokens_saved : list[str] ,tokens_instruction : list[str] , word_set : dict, counter : int, max_tokens : int) -> None :
     try :
         if (counter == max_tokens) :
             return
@@ -61,10 +64,13 @@ def recur_func (tokens_saved : list[str], word_set : dict, counter : int, max_to
         if not tokens:
             return
 
-        selected_token = tokens[0]
+        selected_token = tokens[0].get("token_vocab", "")
+        token_instruction = tokens[0].get("instruction", "")
+
         dict_result = replace_voted_token(word_set, selected_token)
         tokens_saved.append(selected_token)
-        recur_func(tokens_saved , dict_result, counter + 1, max_tokens)
+        tokens_instruction.append(token_instruction)
+        recur_func(tokens_saved, tokens_instruction, dict_result, counter + 1, max_tokens)
 
     except Exception as e:
         pprint(f" Error Occured ! {e}") 

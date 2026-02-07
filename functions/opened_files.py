@@ -15,3 +15,12 @@ def write_into_json (file_name : str , object_written : dict) -> dict :
     with open(file_name, 'r',encoding="latin-1") as f:
         data = json.load(f)
     return data
+
+def read_text_file(file_path : str) -> list[str] :
+    try :
+        with open(file_path, 'r', encoding="latin-1") as file:
+            lines = file.readlines()
+        return [ line.strip() for line in lines ]
+    except FileNotFoundError:
+        print(f"Error: The file at {file_path} was not found.")
+        return []
