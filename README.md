@@ -8,8 +8,8 @@ This project aims to demystify Large Language Models by implementing each compon
 
 ## Project Status
 
-**Current Phase:** Tokenization (Complete ✓)  
-**Next Phase:** Encoder/Decoder Implementation
+**Current Phase:** Complete Tokenizer (Complete ✓)  
+**Next Phase:** Data Preparation
 
 ### Progress Tracker
 
@@ -20,11 +20,11 @@ This project aims to demystify Large Language Models by implementing each compon
   - [x] Vocabulary generation (884 tokens)
   - [x] Frequency threshold to prevent overfitting
   - [x] Scaling optimizations identified for large datasets
-- [ ] **Phase 2: Complete Tokenizer**
-  - [ ] Encoder function (text → token IDs)
-  - [ ] Decoder function (token IDs → text)
-  - [ ] Save/load tokenizer
-  - [ ] Round-trip testing
+- [x] **Phase 2: Complete Tokenizer**
+  - [x] Encoder function (text → token IDs)
+  - [x] Decoder function (token IDs → text)
+  - [x] Save/load tokenizer (instructions.txt + vocab.json)
+  - [x] Round-trip testing
 - [ ] **Phase 3: Data Preparation**
   - [ ] Collect training corpus
   - [ ] Tokenize all data
@@ -58,6 +58,11 @@ This project aims to demystify Large Language Models by implementing each compon
   - [ ] Hyperparameter tuning
 
 ## What We've Built So Far
+
+**Completed Phases:**
+
+- ✅ Phase 1: BPE Training Algorithm (884-token vocabulary)
+- ✅ Phase 2: Complete Encoder/Decoder Pipeline (Round-trip verified)
 
 ### Phase 1: Byte Pair Encoding (BPE) Tokenizer
 
@@ -126,6 +131,49 @@ BPE works by iteratively merging the most frequent adjacent character pairs:
 
 The frequency-based dataset provides more realistic token distributions matching actual English usage, while the morphological dataset is better for understanding how BPE learns linguistic structures.
 
+### Phase 2: Encoder & Decoder Implementation
+
+Successfully implemented the complete tokenization pipeline for converting text to token IDs and back.
+
+#### Functions Implemented
+
+**1. `encoder_(word: str, instructions: list[str]) -> list[str]`**
+
+- Takes input text and merge instructions
+- Splits text into characters
+- Sequentially applies all BPE merge rules
+- Returns list of subword tokens
+
+**2. `decode_tokens(tokens: list[str], vocab: dict) -> list[int]`**
+
+- Converts token strings to their numeric IDs
+- Looks up each token in vocabulary dictionary
+- Returns list of token IDs ready for model input
+
+**3. `decoder(token_ids: list[int], vocab: dict) -> str`**
+
+- Converts token IDs back to original text
+- Creates reverse mapping (ID → token string)
+- Concatenates all tokens into final text
+- Completes the round-trip: text → IDs → text
+
+#### Files & Outputs
+
+- **`functions/encoder.py`** - All encoding/decoding functions
+- **`output/instructions.txt`** - Ordered merge rules (541 merges)
+- **`output/output_set.json`** - Complete vocabulary (884 tokens)
+
+#### Testing & Verification
+
+Round-trip encoding/decoding tested and verified:
+
+```
+Input: "journey"
+→ Tokens: ['j', 'o', 'ur', 'n', 'ey']
+→ IDs: [106, 111, 332, 110, 574]
+→ Decoded: "journey" ✓
+```
+
 ## Project Structure
 
 ```
@@ -133,15 +181,14 @@ The frequency-based dataset provides more realistic token distributions matching
 ├── main.py                          # Training script
 ├── functions/
 │   ├── byte_pair_encoding.py        # BPE algorithm implementation
+│   ├── encoder.py                   # Encoder/decoder functions ✨
 │   └── opened_files.py              # File I/O utilities
 ├── data_set/
 │   ├── data.json                    # Original training corpus (1000 morphologically-rich words)
-│   └── common_words_1000.json       # Frequency-based corpus (1000 most common English words) ✨ NEW
+│   └── common_words_1000.json       # Frequency-based corpus (1000 most common English words) ✨
 ├── output/
-│   └── output_set.json              # Generated vocabulary
-├── vocab/                           # (To be created)
-│   ├── merges.txt                   # Ordered merge rules
-│   └── vocab.json                   # Token mappings
+│   ├── output_set.json              # Generated vocabulary
+│   └── instructions.txt             # Ordered merge rules ✨
 ├── .env                             # Configuration
 ├── PROGRESS.md                      # Detailed progress log
 └── README.md                        # This file
@@ -157,7 +204,7 @@ The frequency-based dataset provides more realistic token distributions matching
 4. **Repeat:** Continue until vocabulary size reached or frequency threshold met
 5. **Save:** Store learned merge rules and vocabulary mappings
 
-### Encoding Phase (Next Step)
+### Encoding Phase (Completed ✓)
 
 1. **Input:** Take arbitrary text (e.g., "playground")
 2. **Split:** Convert to characters ['p','l','a','y','g','r','o','u','n','d']
@@ -167,6 +214,25 @@ The frequency-based dataset provides more realistic token distributions matching
    - Merge 'p'+'lay' → 'play'
 4. **Result:** ['play','g','r','o','u','n','d']
 5. **Convert:** Map to token IDs [402, 103, 114, 111, 117, 110, 100]
+
+**Implementation:**
+
+- `encoder_(word, instructions)` - Applies merge rules to text
+- `decode_tokens(tokens, vocab)` - Converts tokens to IDs
+- Saves merge instructions to `instructions.txt` for reproducibility
+
+### Decoding Phase (Completed ✓)
+
+1. **Input:** Token IDs (e.g., [402, 103, 114, 111, 117, 110, 100])
+2. **Lookup:** Map each ID back to its token string
+3. **Concatenate:** Join all tokens together
+4. **Result:** "playground"
+
+**Implementation:**
+
+- `decoder(token_ids, vocab)` - Converts IDs back to text
+- Creates reverse mapping (ID → token)
+- Round-trip verified: text → encode → decode → text
 
 ### Why BPE?
 
@@ -178,38 +244,52 @@ The frequency-based dataset provides more realistic token distributions matching
 
 ## Next Steps
 
-### Immediate: Complete the Tokenizer
+### Phase 3: Data Preparation
 
-#### 1. Implement Encoder
+Now that we have a complete tokenizer, the next phase is preparing training data for the LLM:
 
-```python
-def encode(text, merge_rules, vocab):
-    """Convert text to token IDs"""
-    tokens = list(text)
-    for merge in merge_rules:
-        # Apply merge sequentially
-        tokens = apply_merge(tokens, merge)
-    return [vocab[token] for token in tokens]
-```
-
-#### 2. Implement Decoder
+#### 1. Collect Training Corpus
 
 ```python
-def decode(token_ids, vocab_inverse):
-    """Convert token IDs back to text"""
-    return ''.join([vocab_inverse[id] for id in token_ids])
+# Gather large text dataset (books, articles, code, etc.)
+# Target: 10MB - 100MB+ of text data
+corpus = load_training_data()
 ```
 
-#### 3. Test Round-Trip
+#### 2. Tokenize All Data
 
 ```python
-text = "playground"
-encoded = encode(text)
-decoded = decode(encoded)
-assert decoded == text  # Must pass
+# Apply our tokenizer to entire corpus
+tokenized_data = []
+for text in corpus:
+    tokens = encoder_(text, merge_instructions)
+    token_ids = decode_tokens(tokens, vocab)
+    tokenized_data.extend(token_ids)
 ```
 
-### After Tokenizer: Build the LLM
+#### 3. Create Training Batches
+
+```python
+# Split into sequences of fixed length (e.g., 128 tokens)
+# Create input-target pairs for next-token prediction
+def create_batches(token_ids, seq_length=128, batch_size=32):
+    # Return batches of shape (batch_size, seq_length)
+    pass
+```
+
+#### 4. Add Special Tokens
+
+```python
+# Add tokens for: <PAD>, <BOS>, <EOS>, <UNK>
+special_tokens = {
+    "<PAD>": 0,   # Padding
+    "<BOS>": 1,   # Beginning of sequence
+    "<EOS>": 2,   # End of sequence
+    "<UNK>": 3    # Unknown token
+}
+```
+
+### After Data Preparation: Build the LLM
 
 1. **Embeddings:** Convert token IDs to dense vectors
 2. **Positional Encoding:** Add position information
@@ -227,6 +307,9 @@ assert decoded == text  # Must pass
 - Role of frequency thresholds in preventing overfitting
 - Importance of merge order in building complex patterns
 - How production LLMs (GPT) handle tokenization at scale
+- **Complete tokenization pipeline:** Text ↔ Token IDs bidirectional conversion
+- **Round-trip verification:** Ensuring encoding/decoding are inverse operations
+- **Vocabulary management:** Mapping between tokens, IDs, and text
 
 ### Technical Skills
 
@@ -235,6 +318,9 @@ assert decoded == text  # Must pass
 - Vocabulary design and optimization
 - Recursive data structure manipulation
 - Text preprocessing for ML
+- **Bidirectional mappings:** Creating and using token↔ID dictionaries
+- **Sequential rule application:** Applying ordered transformations
+- **Data pipeline design:** Chaining encode/decode operations
 
 ## Technical Specifications
 
@@ -248,9 +334,11 @@ assert decoded == text  # Must pass
 **Performance:**
 
 - Training: ~1-2 seconds on 1000 words
-- Encoding (estimated): ~0.01 seconds per 1000 characters
+- Encoding: ~0.01 seconds per 1000 characters ✓ Implemented
+- Decoding: Instant (dictionary lookup) ✓ Implemented
 - Vocabulary size: 884 tokens
 - Compression ratio: ~2-4x (characters → tokens)
+- Merge rules: 541 sequential operations
 
 ## Comparison to Production Systems
 
@@ -346,6 +434,32 @@ DATA_SET_FILE="data_set/data.json"
 DATA_SET_FILE="data_set/common_words_1000.json"
 
 FILE_GENERATION="output/output_set.json"
+INSTRUCTIONS_FILE="output/instructions.txt"
+```
+
+### Using the Encoder/Decoder
+
+After training, use the tokenizer to encode and decode text:
+
+```python
+from functions.encoder import encoder_, decode_tokens, decoder
+from functions.opened_files import open_reads_json_file, read_text_file
+import os
+
+# Load trained tokenizer
+vocab_set = open_reads_json_file("output/output_set.json")
+instructions = read_text_file("output/instructions.txt")
+
+# Encode text to token IDs
+text = "playground"
+tokens = encoder_(text, instructions)           # ['play', 'g', 'r', 'o', 'u', 'n', 'd']
+token_ids = decode_tokens(tokens, vocab_set)    # [402, 103, 114, 111, 117, 110, 100]
+
+# Decode token IDs back to text
+decoded_text = decoder(token_ids, vocab_set)    # "playground"
+
+# Verify round-trip
+assert decoded_text == text  # ✓ Success
 ```
 
 ## Contributing
@@ -362,6 +476,6 @@ Built as a deep dive into LLM architecture and training, demonstrating that comp
 
 ---
 
-**Status:** Phase 1 Complete - Tokenization Training ✓  
-**Next:** Phase 2 - Encoder/Decoder Implementation  
+**Status:** Phase 2 Complete - Complete Tokenizer ✓  
+**Next:** Phase 3 - Data Preparation  
 **Last Updated:** February 8, 2026

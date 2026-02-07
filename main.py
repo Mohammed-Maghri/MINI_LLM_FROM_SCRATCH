@@ -8,7 +8,7 @@ from functions.opened_files import (
 from functions.byte_pair_encoding import ( 
     start_word_set_generation,
     recur_func )
-from functions.encoder import (encoder_ , decode_tokens)
+from functions.encoder import (encoder_ , decode_tokens, decoder)
 
 load_dotenv()
 
