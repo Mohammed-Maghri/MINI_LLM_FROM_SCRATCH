@@ -9,19 +9,9 @@ from functions.byte_pair_encoding import (
     start_word_set_generation,
     recur_func )
 from functions.encoder import (encoder_ , decode_tokens, decoder)
+from functions.normalizer import generate_tokens_list
 
 load_dotenv()
-
-def generate_tokens_list (tokens : list[str]) -> dict :
-    generated_tokens : dict = {"tokens_generated" : {}}
-    try : 
-        for i in range(255) :
-            generated_tokens.get("tokens_generated", {})[bytes([i]).decode("latin-1")] = i
-        for i in range(len(tokens)) :
-            generated_tokens.get("tokens_generated", {})[tokens[i]] = i + 256
-    except Exception as e :
-        pprint(f"Error Occured !!{e}")
-    return generated_tokens
 
 
 tokens_saved : list[str] = []
