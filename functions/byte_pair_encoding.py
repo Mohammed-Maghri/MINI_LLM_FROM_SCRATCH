@@ -8,6 +8,7 @@ def start_word_set_generation(data : dict) -> dict:
             for value in values:
                 element : list[str] = list(value)
                 word_sets.append(element)
+    print(word_sets)
     return {"word_sets": word_sets,"tokens_size": data.get("tokens_size", 0)}
 
 
@@ -63,5 +64,6 @@ def recur_func (tokens_saved : list[str], word_set : dict, counter : int, max_to
         dict_result = replace_voted_token(word_set, selected_token)
         tokens_saved.append(selected_token)
         recur_func(tokens_saved , dict_result, counter + 1, max_tokens)
+
     except Exception as e:
         pprint(f" Error Occured ! {e}") 
