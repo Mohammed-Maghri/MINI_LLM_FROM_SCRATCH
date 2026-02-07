@@ -45,7 +45,8 @@ def sliding_window_comparison (word_sets : dict) -> list[str]:
 
     all_list : list[int] = list(tokens_count.values())
     max_value : int = max(all_list)
-
+    if max_value == 1 :
+        return []
     for (key, value) in tokens_count.items():
         if value == max_value:
             all_tokens.append(key[0] + key[1])
