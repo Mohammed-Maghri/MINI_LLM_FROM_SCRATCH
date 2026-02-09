@@ -1,5 +1,9 @@
+import sys
 import pprint
 from collections import Counter
+
+# Increase recursion limit for large datasets
+sys.setrecursionlimit(10000)
 
 def start_word_set_generation(data : dict) -> dict:
     word_sets = []
@@ -73,4 +77,4 @@ def recur_func (tokens_saved : list[str] ,tokens_instruction : list[str] , word_
         recur_func(tokens_saved, tokens_instruction, dict_result, counter + 1, max_tokens)
 
     except Exception as e:
-        pprint(f" Error Occured ! {e}") 
+        print(f" Error Occurred! {e}") 

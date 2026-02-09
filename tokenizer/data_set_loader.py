@@ -1,6 +1,6 @@
 import fitz
 from pathlib import Path
-from functions.normalizer import normalizer_
+from tokenizer.normalizer import normalizer_
 import json
 
 def load_data_set (folder_path : str) -> list[str] :
