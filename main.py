@@ -22,10 +22,7 @@ tokens_instruction : list[str] = []
 # opened_data = open_reads_json_file(os.getenv('DATA_SET_FILE'))
 # word_sets = start_word_set_generation(opened_data)
 # recur_func(tokens_saved, tokens_instruction, word_sets, 0, 3000)
-
-
 # write_into_json(os.getenv('FILE_GENERATION'), generate_tokens_list(tokens_saved))
-
 # with open(os.getenv('INSTRUCTIONS_FILE'), 'w', encoding="utf-8") as f:
 #     for instruction in tokens_instruction :
 #         f.write(instruction + "\n")
