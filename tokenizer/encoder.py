@@ -1,5 +1,11 @@
 
-def encoder_ (word : str, instructions : list[str]) -> list[int] :
+import os
+from dotenv import load_dotenv
+from tokenizer.opened_files import (open_reads_json_file, read_text_file)
+
+load_dotenv()
+def encoder_ (word : str) -> list[int] :
+    instructions = read_text_file(os.getenv('INSTRUCTIONS_FILE'))
     splited_word : list[str] = []
     encoded_word : list[int] = []
 
@@ -23,8 +29,8 @@ def encoder_ (word : str, instructions : list[str]) -> list[int] :
             index += 1
     return splited_word
 
-def decode_tokens (encoded_tokens : list[str], vocab_set : dict) -> list[int] :
+def decode_tokens (encoded_tokens : list[str]) -> list[int] :
     decoded_tokens : list[int] = []
     for token in encoded_tokens :
-        decoded_tokens.append(vocab_set.get("tokens_generated", {}).get(token, None))
+        decoded_tokens.append(open_reads_json_file(os.getenv('FILE_GENERATION')).get("tokens_generated", {}).get(token, None))
     return decoded_tokens

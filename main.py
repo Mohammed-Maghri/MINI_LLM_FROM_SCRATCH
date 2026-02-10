@@ -11,7 +11,7 @@ from tokenizer.byte_pair_encoding import (
 from tokenizer.encoder import (encoder_ , decode_tokens)
 from tokenizer.normalizer import generate_tokens_list
 import numpy as np
-
+import training.train
 
 load_dotenv()
 
@@ -29,11 +29,11 @@ tokens_instruction : list[str] = []
 
 
 vocab_set = open_reads_json_file(os.getenv('FILE_GENERATION'))
-encoded_token = encoder_("he enjoys hiking", read_text_file(os.getenv('INSTRUCTIONS_FILE')))
-decode_tok = decode_tokens(encoded_token, vocab_set)
+encoded_token = encoder_(input("write Sentence : "))
+decode_tok = decode_tokens(encoded_token)
 
 print(np.random.randn(len(vocab_set.get("tokens_generated", {})), 64))
-# print(len(vocab_set.get("tokens_generated", {})))
+print(len(vocab_set.get("tokens_generated", {})))
 
 
 print(f"encoded_token : {encoded_token}")
