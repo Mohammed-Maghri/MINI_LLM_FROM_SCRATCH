@@ -28,13 +28,13 @@ tokens_instruction : list[str] = []
 #         f.write(instruction + "\n")
 
 
-vocab_set = open_reads_json_file(os.getenv('FILE_GENERATION'))
-encoded_token = encoder_(input("write Sentence : "))
-decode_tok = decode_tokens(encoded_token)
+# vocab_set = open_reads_json_file(os.getenv('FILE_GENERATION'))
+# encoded_token = encoder_(input("write Sentence : "))
+# decode_tok = decode_tokens(encoded_token)
 
-print(np.random.randn(len(vocab_set.get("tokens_generated", {})), 64))
-print(len(vocab_set.get("tokens_generated", {})))
+# print(np.random.randn(len(vocab_set.get("tokens_generated", {})), 64))
+# print(len(vocab_set.get("tokens_generated", {})))
 
 
-print(f"encoded_token : {encoded_token}")
-print(f"decode_tok : {decode_tok}")
+# print(f"encoded_token : {encoded_token}")
+# print(f"decode_tok : {decode_tok}")

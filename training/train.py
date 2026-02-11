@@ -19,7 +19,6 @@ sentences : list[str] = [
     # "animals need food and water"
 ]
 
-
 def build_dataset(tokens, context):
     X, Y = [], []
 
@@ -42,5 +41,5 @@ for sentence in sentences:
 
 
 Enb = np.random.randn(len(open_reads_json_file(os.getenv('FILE_GENERATION')).get("tokens_generated", {})), 64) / np.sqrt(64)
-
-print(Enb)
+print(f" --------- > {build_dataset(encoded_tokens, context_size) , Enb[0]}")
+# print(Enb)
