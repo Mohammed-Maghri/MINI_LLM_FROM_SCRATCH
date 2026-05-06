@@ -8,28 +8,29 @@ This project aims to demystify Large Language Models by implementing each compon
 
 ## Project Status
 
-**Current Phase:** Complete Tokenizer (Complete ✓)  
-**Next Phase:** Data Preparation
+**Current Phase:** Phase 3 complete — ready for **Phase 4: Embedding Layer**  
+**Repository root:** `MINI_LLM_FROM_SCRATCH` (all paths below are relative to this directory)
 
 ### Progress Tracker
 
 - [x] **Phase 1: Tokenization Training**
   - [x] Byte Pair Encoding (BPE) algorithm implementation
-  - [x] Training data preparation (1000 words - morphological patterns)
-  - [x] Frequency-based dataset (1000 most common English words) ✨
-  - [x] Vocabulary generation (884 tokens)
-  - [x] Frequency threshold to prevent overfitting
-  - [x] Scaling optimizations identified for large datasets
+  - [x] Training data preparation (morphological patterns in `data_set/data.json`)
+  - [x] Frequency-based list (`data_set/common_words_1000.json`)
+  - [x] Vocabulary generation (size grows with merge count; byte base 0–254 plus learned merges)
+  - [x] Merge cap via `BPE_MAX_MERGES` in `.env`
+  - [x] Scaling notes for larger corpora (streaming, parallel counting)
 - [x] **Phase 2: Complete Tokenizer**
-  - [x] Encoder function (text → token IDs)
-  - [x] Decoder function (token IDs → text)
-  - [x] Save/load tokenizer (instructions.txt + vocab.json)
-  - [x] Round-trip testing
-- [ ] **Phase 3: Data Preparation**
-  - [ ] Collect training corpus
-  - [ ] Tokenize all data
-  - [ ] Create training batches
-  - [ ] Add special tokens
+  - [x] `encoder_` — text → BPE subword strings
+  - [x] `decode_tokens` — subwords → numeric ids
+  - [x] `decoder` — ids → text (round-trip with `encode_to_ids`)
+  - [x] Save/load: `tokenized_data/instructions.txt` + `tokenized_data/vocab.json` (and `output_set.json` for backward compatibility)
+  - [x] Automated round-trip tests in `tests/test_tokenizer.py`
+- [x] **Phase 3: Data Preparation**
+  - [x] Collect training corpus (`training/data_prep.collect_corpus` from JSON + optional `corpus/*.txt`)
+  - [x] Tokenize corpus to a flat id stream (`tokenize_corpus` + `encode_to_ids`)
+  - [x] LM batches (`make_lm_batches`) for next-token prediction
+  - [x] Special tokens `<PAD>`, `<BOS>`, `<EOS>`, `<UNK>` (`tokenizer/special_tokens.py`)
 - [ ] **Phase 4: Embedding Layer**
   - [ ] Token embeddings
   - [ ] Positional encodings
@@ -61,8 +62,9 @@ This project aims to demystify Large Language Models by implementing each compon
 
 **Completed Phases:**
 
-- ✅ Phase 1: BPE Training Algorithm (884-token vocabulary)
-- ✅ Phase 2: Complete Encoder/Decoder Pipeline (Round-trip verified)
+- ✅ Phase 1: BPE training (`tokenizer/byte_pair_encoding.py`)
+- ✅ Phase 2: Encoder / decoder API (`tokenizer/encoder.py`) — round-trip verified in tests
+- ✅ Phase 3: Corpus → ids → batches (`training/data_prep.py`)
 
 ### Phase 1: Byte Pair Encoding (BPE) Tokenizer
 
@@ -95,7 +97,7 @@ BPE works by iteratively merging the most frequent adjacent character pairs:
    - 1000 words with morphological variations
    - Common prefixes (un-, re-, dis-, pre-)
    - Common suffixes (-ing, -ed, -er, -ly, -ness, -able)
-   - Generated vocabulary: 884 tokens (256 base + 628 learned)
+   - Generated vocabulary size = number of merge steps plus byte rows (see `output_set.json`)
 
 2. **Frequency-Based Dataset (`common_words_1000.json`):** ✨ NEW
    - 1000 most commonly used English words
@@ -103,23 +105,16 @@ BPE works by iteratively merging the most frequent adjacent character pairs:
    - Includes core function words, common verbs, nouns, adjectives
    - Optimized for real-world language patterns
 
-**Generated Vocabulary:**
+**Generated vocabulary (shape):**
 
-- Base vocabulary: 256 bytes (IDs 0-255)
-- Learned vocabulary: 628 subword tokens (IDs 256-883)
-- Total: 884 tokens
+- Base: single-byte tokens (Latin-1) for ids starting at 0 (see `tokenizer/normalizer.generate_tokens_list`)
+- Learned: each BPE merge adds one token string mapped to the next integer
+- Total size: `len(tokens_generated)` in `tokenized_data/output_set.json` or `vocab.json` (depends on `BPE_MAX_MERGES` and training data)
 
-**Sample Learned Tokens:**
+**Sample learned tokens** (exact ids vary after retraining):
 
 ```
-256: "in"        - High-frequency suffix
-257: "ing"       - Present participle
-259: "er"        - Agent noun suffix
-264: "ed"        - Past tense
-282: "ness"      - Abstract noun suffix
-402: "play"      - Common root word
-431: "correct"   - Complete word
-845: "understand" - Complex word
+"in", "ing", "er", "ed", "ness", "play", "correct", "understand", …
 ```
 
 **Dataset Comparison:**
@@ -131,67 +126,62 @@ BPE works by iteratively merging the most frequent adjacent character pairs:
 
 The frequency-based dataset provides more realistic token distributions matching actual English usage, while the morphological dataset is better for understanding how BPE learns linguistic structures.
 
-### Phase 2: Encoder & Decoder Implementation
+### Phase 2: Encoder, decoder, persistence
 
-Successfully implemented the complete tokenization pipeline for converting text to token IDs and back.
+The pipeline splits into **merge application** (strings) and **vocabulary lookup** (ids), then **decode** concatenates pieces back into text (standard BPE decode).
 
-#### Functions Implemented
+| Step | Function | Role |
+|------|----------|------|
+| Text → subwords | `encoder_(text, instructions=None)` | Greedy application of merge lines from `instructions.txt` |
+| Subwords → ids | `decode_tokens(tokens, vocab=None, unk_id=None)` | Looks up each piece in `tokens_generated` |
+| One-shot text → ids | `encode_to_ids(...)` | `encoder_` then `decode_tokens` |
+| Ids → text | `decoder(token_ids, vocab=None)` | Inverse map id → string, then concatenate |
 
-**1. `encoder_(word: str, instructions: list[str]) -> list[str]`**
+#### Files and outputs
 
-- Takes input text and merge instructions
-- Splits text into characters
-- Sequentially applies all BPE merge rules
-- Returns list of subword tokens
+| Artifact | Purpose |
+|----------|---------|
+| `tokenized_data/instructions.txt` | One merge rule per line: `left right` (two symbols merged into `left+right`) |
+| `tokenized_data/output_set.json` | `{"tokens_generated": { "<token>": <id>, ... } }` — primary vocab for `.env` `FILE_GENERATION` |
+| `tokenized_data/vocab.json` | Same JSON schema; written beside instructions when you run `python main.py train_bpe` (or copy manually) |
 
-**2. `decode_tokens(tokens: list[str], vocab: dict) -> list[int]`**
+Programmatic save/load helpers live in `tokenizer/tokenizer_bundle.py` (`save_tokenizer`, `load_raw_vocab`, `load_instructions`).
 
-- Converts token strings to their numeric IDs
-- Looks up each token in vocabulary dictionary
-- Returns list of token IDs ready for model input
+#### Round-trip check
 
-**3. `decoder(token_ids: list[int], vocab: dict) -> str`**
-
-- Converts token IDs back to original text
-- Creates reverse mapping (ID → token string)
-- Concatenates all tokens into final text
-- Completes the round-trip: text → IDs → text
-
-#### Files & Outputs
-
-- **`functions/encoder.py`** - All encoding/decoding functions
-- **`output/instructions.txt`** - Ordered merge rules (541 merges)
-- **`output/output_set.json`** - Complete vocabulary (884 tokens)
-
-#### Testing & Verification
-
-Round-trip encoding/decoding tested and verified:
-
-```
-Input: "journey"
-→ Tokens: ['j', 'o', 'ur', 'n', 'ey']
-→ IDs: [106, 111, 332, 110, 574]
-→ Decoded: "journey" ✓
+```text
+text  --encode_to_ids-->  [id, ...]  --decoder-->  text
 ```
 
-## Project Structure
+Verified by `tests/test_tokenizer.py` (run from repo root with `python -m unittest tests.test_tokenizer -v`).
 
-```
-/home/maghri/Ai/
-├── main.py                          # Training script
-├── functions/
-│   ├── byte_pair_encoding.py        # BPE algorithm implementation
-│   ├── encoder.py                   # Encoder/decoder functions ✨
-│   └── opened_files.py              # File I/O utilities
+## Project structure
+
+```text
+MINI_LLM_FROM_SCRATCH/
+├── main.py                     # BPE training (`train_bpe`) + encode/decode smoke
+├── tokenizer/
+│   ├── byte_pair_encoding.py   # BPE training loop
+│   ├── encoder.py              # encoder_, decode_tokens, decoder, encode_to_ids
+│   ├── tokenizer_bundle.py   # save/load instructions + vocab JSON
+│   ├── special_tokens.py       # <PAD>, <BOS>, <EOS>, <UNK> extension
+│   ├── opened_files.py         # JSON helpers used by training scripts
+│   ├── normalizer.py           # `generate_tokens_list` (byte vocab + merges)
+│   └── data_set_loader.py      # Optional PDF ingestion helpers
+├── training/
+│   ├── data_prep.py            # Phase 3: corpus, tokenize, batches
+│   └── train.py                # Tiny demo: batches + random embedding matrix
+├── tests/
+│   └── test_tokenizer.py       # Round-trip + UNK tests
 ├── data_set/
-│   ├── data.json                    # Original training corpus (1000 morphologically-rich words)
-│   └── common_words_1000.json       # Frequency-based corpus (1000 most common English words) ✨
-├── output/
-│   ├── output_set.json              # Generated vocabulary
-│   └── instructions.txt             # Ordered merge rules ✨
-├── .env                             # Configuration
-├── PROGRESS.md                      # Detailed progress log
-└── README.md                        # This file
+│   ├── data.json               # Large word list (e.g. book-derived tokens)
+│   └── common_words_1000.json  # 1000 high-frequency words
+├── tokenized_data/
+│   ├── instructions.txt        # Merge rules (generated)
+│   ├── output_set.json         # Vocab (generated; `FILE_GENERATION`)
+│   └── vocab.json              # Same as vocab sidecar (`VOCAB_JSON`)
+├── .env
+└── README.md
 ```
 
 ## How BPE Tokenization Works
@@ -204,35 +194,20 @@ Input: "journey"
 4. **Repeat:** Continue until vocabulary size reached or frequency threshold met
 5. **Save:** Store learned merge rules and vocabulary mappings
 
-### Encoding Phase (Completed ✓)
+### Encoding (inference)
 
-1. **Input:** Take arbitrary text (e.g., "playground")
-2. **Split:** Convert to characters ['p','l','a','y','g','r','o','u','n','d']
-3. **Apply Merges:** Sequentially apply all learned merge rules
-   - Merge 'a'+'y' → 'ay'
-   - Merge 'l'+'ay' → 'lay'
-   - Merge 'p'+'lay' → 'play'
-4. **Result:** ['play','g','r','o','u','n','d']
-5. **Convert:** Map to token IDs [402, 103, 114, 111, 117, 110, 100]
+1. Split the string into Unicode characters (one char per cell).
+2. Walk `instructions.txt` in order; each line `a b` replaces adjacent `a` and `b` with the merged symbol `ab` until no rule applies for that line.
+3. Map each resulting subword string to an integer with `tokens_generated`.
 
-**Implementation:**
+Use `encode_to_ids` for steps 2–3 in one call when `instructions` and `vocab` are loaded (or rely on `.env` paths).
 
-- `encoder_(word, instructions)` - Applies merge rules to text
-- `decode_tokens(tokens, vocab)` - Converts tokens to IDs
-- Saves merge instructions to `instructions.txt` for reproducibility
+### Decoding (inference)
 
-### Decoding Phase (Completed ✓)
+1. Map each id to its token string (reverse of `tokens_generated`).
+2. Concatenate strings with no extra spaces (BPE-style).
 
-1. **Input:** Token IDs (e.g., [402, 103, 114, 111, 117, 110, 100])
-2. **Lookup:** Map each ID back to its token string
-3. **Concatenate:** Join all tokens together
-4. **Result:** "playground"
-
-**Implementation:**
-
-- `decoder(token_ids, vocab)` - Converts IDs back to text
-- Creates reverse mapping (ID → token)
-- Round-trip verified: text → encode → decode → text
+Use `decoder` for the full sequence.
 
 ### Why BPE?
 
@@ -242,54 +217,31 @@ Input: "journey"
 - **Language-agnostic** - purely statistical approach
 - **Same algorithm used by GPT-2/3/4, RoBERTa, BART**
 
-## Next Steps
+## Phase 3: Data preparation (implemented)
 
-### Phase 3: Data Preparation
+Module: `training/data_prep.py`.
 
-Now that we have a complete tokenizer, the next phase is preparing training data for the LLM:
+1. **`collect_corpus(json_paths=..., text_glob=...)`**  
+   Loads strings from JSON files under `data_set/` (`data_set`, `words`, or a bare JSON list) and optionally every non-empty line from text files matching a glob (for example `corpus/*.txt` once you add files there).
 
-#### 1. Collect Training Corpus
+2. **`tokenize_corpus(...)`**  
+   Runs `encode_to_ids` per segment, inserts `<EOS>` between segments by default, and can prepend `<BOS>` per segment with `bos_every=True`. Unknown subwords resolve to `<UNK>` when you pass the extended vocabulary from step 4.
 
-```python
-# Gather large text dataset (books, articles, code, etc.)
-# Target: 10MB - 100MB+ of text data
-corpus = load_training_data()
+3. **`make_lm_batches(token_ids, seq_len, batch_size)`**  
+   Returns NumPy arrays `X` and `Y` with shape `(num_batches, batch_size, seq_len)` where each row is a contiguous slice of the corpus and `Y` is the next-token target (shifted by one inside the slice).
+
+4. **Special tokens**  
+   `extend_vocab_with_specials` in `tokenizer/special_tokens.py` appends `<PAD>`, `<BOS>`, `<EOS>`, `<UNK>` **after** the current maximum id so you do not collide with byte or merge ids. Training embeddings should use `len(tokens_generated)` after extension.
+
+Convenience entry point: **`prepare_training_bundle(...)`** wires corpus → specials → ids → batches.
+
+Smoke test (uses `PHASE3_SMOKE_JSON` in `.env`, default `common_words_1000.json`, so the huge `data.json` is not loaded by accident):
+
+```bash
+python -m training.data_prep
 ```
 
-#### 2. Tokenize All Data
-
-```python
-# Apply our tokenizer to entire corpus
-tokenized_data = []
-for text in corpus:
-    tokens = encoder_(text, merge_instructions)
-    token_ids = decode_tokens(tokens, vocab)
-    tokenized_data.extend(token_ids)
-```
-
-#### 3. Create Training Batches
-
-```python
-# Split into sequences of fixed length (e.g., 128 tokens)
-# Create input-target pairs for next-token prediction
-def create_batches(token_ids, seq_length=128, batch_size=32):
-    # Return batches of shape (batch_size, seq_length)
-    pass
-```
-
-#### 4. Add Special Tokens
-
-```python
-# Add tokens for: <PAD>, <BOS>, <EOS>, <UNK>
-special_tokens = {
-    "<PAD>": 0,   # Padding
-    "<BOS>": 1,   # Beginning of sequence
-    "<EOS>": 2,   # End of sequence
-    "<UNK>": 3    # Unknown token
-}
-```
-
-### After Data Preparation: Build the LLM
+### Next: build the model (Phase 4 onward)
 
 1. **Embeddings:** Convert token IDs to dense vectors
 2. **Positional Encoding:** Add position information
@@ -336,9 +288,9 @@ special_tokens = {
 - Training: ~1-2 seconds on 1000 words
 - Encoding: ~0.01 seconds per 1000 characters ✓ Implemented
 - Decoding: Instant (dictionary lookup) ✓ Implemented
-- Vocabulary size: 884 tokens
-- Compression ratio: ~2-4x (characters → tokens)
-- Merge rules: 541 sequential operations
+- Vocabulary size: see `len(tokens_generated)` after training
+- Compression ratio: depends on text (typically fewer tokens than characters for English)
+- Merge rules: one line per merge in `instructions.txt`
 
 ## Comparison to Production Systems
 
@@ -348,8 +300,8 @@ special_tokens = {
 | -------------- | ------------------ | ---------------- |
 | Algorithm      | BPE                | BPE              |
 | Base Vocab     | 256 bytes          | 256 bytes        |
-| Learned Tokens | 628                | 50,000           |
-| Total Vocab    | 884                | 50,257           |
+| Learned Tokens | (BPE merge count)  | 50,000           |
+| Total Vocab    | configurable       | 50,257           |
 | Training Data  | 1000 words         | 40GB text        |
 | Encoding Speed | ~0.01s/1K chars    | ~0.003s/1K chars |
 
@@ -400,66 +352,60 @@ For handling massive datasets (millions+ words):
 - Self-attention mechanisms
 - Autoregressive language modeling
 
-## Installation & Usage
+## Installation and usage
 
-### Prerequisites
+### Environment (recommended)
 
-```bash
-python3 -m pip install python-dotenv
-```
-
-### Training the Tokenizer
+On PEP 668–managed Python, use a virtual environment:
 
 ```bash
-cd /home/maghri/Ai
-python3 main.py
+cd /path/to/MINI_LLM_FROM_SCRATCH
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
 ```
 
-This will:
+### Train or refresh the tokenizer
 
-1. Load the training dataset from `data_set/data.json` (or configure to use `common_words_1000.json`)
-2. Run BPE training algorithm
-3. Generate vocabulary at `output/output_set.json`
-4. Print learned merge tokens
-
-### Configuration
-
-Edit `.env` file to choose dataset:
-
-```
-# Option 1: Morphological patterns (original)
-DATA_SET_FILE="data_set/data.json"
-
-# Option 2: Most common English words (frequency-based)
-DATA_SET_FILE="data_set/common_words_1000.json"
-
-FILE_GENERATION="output/output_set.json"
-INSTRUCTIONS_FILE="output/instructions.txt"
+```bash
+.venv/bin/python main.py train_bpe
 ```
 
-### Using the Encoder/Decoder
+This reads `DATA_SET_FILE` and `BPE_MAX_MERGES` from `.env`, writes `FILE_GENERATION` (JSON vocab), `INSTRUCTIONS_FILE`, and `VOCAB_JSON`.
 
-After training, use the tokenizer to encode and decode text:
+Default `.env` points at `data_set/common_words_1000.json` for a faster training loop; switch to `data_set/data.json` for a larger word list.
+
+### Day-to-day: encode and decode
+
+```bash
+.venv/bin/python main.py
+```
+
+prints a short encode/decode sample using `ENCODE_SAMPLE` (optional in `.env`).
+
+### Programmatic API
 
 ```python
-from functions.encoder import encoder_, decode_tokens, decoder
-from functions.opened_files import open_reads_json_file, read_text_file
-import os
+from tokenizer.encoder import encoder_, decode_tokens, decoder, encode_to_ids
+from tokenizer.opened_files import open_reads_json_file
+from tokenizer.tokenizer_bundle import load_instructions
 
-# Load trained tokenizer
-vocab_set = open_reads_json_file("output/output_set.json")
-instructions = read_text_file("output/instructions.txt")
+vocab = open_reads_json_file("tokenized_data/output_set.json")
+instructions = load_instructions("tokenized_data/instructions.txt")
 
-# Encode text to token IDs
-text = "playground"
-tokens = encoder_(text, instructions)           # ['play', 'g', 'r', 'o', 'u', 'n', 'd']
-token_ids = decode_tokens(tokens, vocab_set)    # [402, 103, 114, 111, 117, 110, 100]
+text = "journey"
+assert decoder(encode_to_ids(text, instructions=instructions, vocab=vocab), vocab=vocab) == text
+```
 
-# Decode token IDs back to text
-decoded_text = decoder(token_ids, vocab_set)    # "playground"
+### Tests
 
-# Verify round-trip
-assert decoded_text == text  # ✓ Success
+```bash
+.venv/bin/python -m unittest tests.test_tokenizer -v
+```
+
+### Training data demo (batches)
+
+```bash
+.venv/bin/python -m training.train
 ```
 
 ## Contributing
@@ -476,6 +422,6 @@ Built as a deep dive into LLM architecture and training, demonstrating that comp
 
 ---
 
-**Status:** Phase 2 Complete - Complete Tokenizer ✓  
-**Next:** Phase 3 - Data Preparation  
-**Last Updated:** February 8, 2026
+**Status:** Phases 1–3 complete (tokenizer + data prep)  
+**Next:** Phase 4 — embedding layer  
+**Last Updated:** May 6, 2026
