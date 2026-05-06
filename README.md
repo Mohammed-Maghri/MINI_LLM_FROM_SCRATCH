@@ -6,6 +6,21 @@ A comprehensive implementation of a Large Language Model built entirely from the
 
 This project aims to demystify Large Language Models by implementing each component from scratch, without relying on existing ML frameworks. Rather than using pre-built libraries, we build every piece of the pipeline to gain deep insight into how models like GPT actually work under the hood.
 
+### Architecture walkthrough (linked notes)
+
+Step-by-step explanations live under [`Architecture/`](Architecture/README.md). Each item below is a **text link** to that topic’s folder (`README.md`):
+
+- [**Overview and three pipelines**](Architecture/01-overview-and-data-flow/README.md) — training BPE, encoding new text, and building LM batches as separate flows.
+- [**Phase 1 — BPE training (learning merges)**](Architecture/02-phase1-bpe-training/README.md) — `start_word_set_generation`, counting pairs, `replace_voted_token`, `recur_func`.
+- [**Building the vocabulary table (token → id)**](Architecture/03-building-the-vocabulary-table/README.md) — byte rows and merge ids in `generate_tokens_list`.
+- [**Phase 2 — Encoding text to subwords**](Architecture/04-phase2-encoding-text-to-subwords/README.md) — how `encoder_` applies `instructions.txt` line by line.
+- [**Phase 2 — Subwords to ids and back**](Architecture/05-phase2-subwords-to-ids-and-back/README.md) — `decode_tokens`, `decoder`, `encode_to_ids`, round-trip behavior.
+- [**Files on disk and save/load**](Architecture/06-files-on-disk-and-save-load/README.md) — `instructions.txt`, `output_set.json` / `vocab.json`, `.env` keys, `tokenizer_bundle`.
+- [**Phase 3 — Corpus and flat token stream**](Architecture/07-phase3-corpus-and-token-stream/README.md) — `collect_corpus`, `tokenize_corpus`, EOS between segments, UNK during encode.
+- [**Phase 3 — Language-model batches**](Architecture/08-phase3-language-model-batches/README.md) — `make_lm_batches`, tensor shapes, `prepare_training_bundle`.
+- [**Special tokens (PAD / BOS / EOS / UNK)**](Architecture/09-special-tokens/README.md) — `extend_vocab_with_specials` and why new ids sit after the max merge id.
+- [**Entry points (`main`, training modules, tests)**](Architecture/10-entry-points-main-and-modules/README.md) — how to run `train_bpe`, smoke scripts, and unit tests.
+
 ## Project Status
 
 **Current Phase:** Phase 3 complete — ready for **Phase 4: Embedding Layer**  
